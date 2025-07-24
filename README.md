@@ -1,6 +1,12 @@
-# Testovoe
+# Тестовое задание
 
-This template should help get you started developing with Vue 3 in Vite.
+Был разработан компонент формы управлением учётными записями
+
+## Стек проекта
+
+### - [Vue 3](https://vuejs.org/)
+### - [TypeScript](https://www.typescriptlang.org/)
+### - [Pinia](https://pinia.vuejs.org/)
 
 ## Recommended IDE Setup
 
