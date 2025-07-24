@@ -1,90 +1,145 @@
 <template>
-  <div class="account-management">
+  <div class="account-management dark-theme">
     <div class="container">
       <div class="header">
         <h1>Учетные записи</h1>
-        <button class="add-button" @click="addAccount">+</button>
+        <el-button 
+          type="primary" 
+          :icon="Plus" 
+          circle
+          @click="addAccount"
+          class="add-button"
+        />
       </div>
-      <div class="hint">
-        <span class="hint-icon">?</span>
-        Для указания нескольких меток для одной пары логин/пароль используйте разделитель ;
-      </div>
-      <div class="table-header">
+      <el-alert
+        type="info"
+        :closable="false"
+        show-icon
+        class="hint-alert"
+      >
+        <template #title>
+          Для указания нескольких меток для одной пары логин/пароль используйте разделитель ;
+        </template>
+      </el-alert>
+      <div class="table-header grid-table" :class="{ 'no-password': !hasPasswordFields }">
         <div class="col-tags">Метки</div>
         <div class="col-type">Тип записи</div>
         <div class="col-login">Логин</div>
-        <div class="col-password">Пароль</div>
+        <div v-if="hasPasswordFields" class="col-password">Пароль</div>
         <div class="col-actions"></div>
       </div>
       <div v-if="accountStore.accounts.length === 0" class="empty-state">
         <p>Нет созданных учетных записей</p>
         <p>Нажмите кнопку "+" для создания новой</p>
       </div>
-      <div v-for="(account, index) in accountStore.accounts" :key="account.id" class="table-row">
+      <div v-for="(account, index) in accountStore.accounts" :key="account.id" 
+           class="table-row grid-table" :class="{ 'no-password': account.type === 'LDAP' || !hasPasswordFields }">
+        <!-- Метки -->
         <div class="col-tags">
-          <input 
-            v-model="account.tags" 
-            @blur="validateAndSave(account)"
+          <el-input
+            v-model="account.tags"
             :placeholder="getTagsPlaceholder(account)"
             maxlength="50"
+            @blur="validateAndSave(account)"
+            clearable
             class="input-field"
-          >
+          />
         </div>
         <div class="col-type">
-          <select 
-            v-model="account.type" 
+          <el-select
+            v-model="account.type"
+            placeholder="Выберите тип"
             @change="onTypeChange(account)"
-            :class="['select-field', { error: !account.type && account.validated }]"
+            class="select-field"
+            :class="{ 'error-field': !account.type && account.validated }"
           >
-            <option value="">Выберите тип</option>
-            <option value="Локальная">Локальная</option>
-            <option value="LDAP">LDAP</option>
-          </select>
+            <el-option label="Локальная" value="Локальная" />
+            <el-option label="LDAP" value="LDAP" />
+          </el-select>
         </div>
         <div class="col-login">
-          <input 
-            v-model="account.login" 
-            @blur="validateAndSave(account)"
+          <el-input
+            v-model="account.login"
             placeholder="Значение"
             maxlength="100"
-            :class="['input-field', { error: !account.login && account.validated }]"
-          >
+            @blur="validateAndSave(account)"
+            clearable
+            :prefix-icon="User"
+            class="input-field"
+            :class="{ 'error-field': !account.login && account.validated }"
+          />
         </div>
-        <div class="col-password">
-          <div v-if="account.type === 'Локальная'" class="password-container">
-            <input 
-              v-model="account.password" 
-              :type="account.showPassword ? 'text' : 'password'"
-              @blur="validateAndSave(account)"
-              placeholder="Значение"
-              maxlength="100"
-              :class="['input-field password-input', { error: account.type === 'Локальная' && !account.password && account.validated }]"
-            >
-            <button 
-              type="button" 
-              class="password-toggle"
-              @click="togglePasswordVisibility(account)"
-            >
-              <span v-if="account.showPassword">o</span>
-              <span v-else>x</span>
-            </button>
-          </div>
-          <div v-else class="password-disabled">
-          </div>
+        <div v-if="account.type === 'Локальная'" class="col-password">
+          <el-input
+            v-model="account.password"
+            :type="account.showPassword ? 'text' : 'password'"
+            placeholder="Значение"
+            maxlength="100"
+            @blur="validateAndSave(account)"
+            clearable
+            :prefix-icon="Lock"
+            class="input-field password-input"
+            :class="{ 'error-field': account.type === 'Локальная' && !account.password && account.validated }"
+          >
+            <template #suffix>
+              <el-icon 
+                class="password-toggle" 
+                @click="togglePasswordVisibility(account)"
+              >
+                <View v-if="account.showPassword" />
+                <Hide v-else />
+              </el-icon>
+            </template>
+          </el-input>
         </div>
         <div class="col-actions">
-          <button class="delete-button" @click="deleteAccount(index)">
-            X
-          </button>
+          <el-popconfirm
+            title="Удалить эту запись?"
+            confirm-button-text="Да"
+            cancel-button-text="Нет"
+            @confirm="deleteAccount(index)"
+            popper-class="dark-popconfirm"
+          >
+            <template #reference>
+              <el-button 
+                type="danger" 
+                :icon="Delete" 
+                circle 
+                size="small"
+                class="delete-button"
+              />
+            </template>
+          </el-popconfirm>
         </div>
+      </div>
+      <div v-if="validationErrors.length > 0" class="validation-errors">
+        <el-alert
+          v-for="(error, index) in validationErrors"
+          :key="index"
+          :title="error"
+          type="error"
+          :closable="false"
+          show-icon
+          class="error-alert"
+        />
       </div>
     </div>
   </div>
 </template>
-
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, computed, ref } from 'vue'
 import { useAccountStore } from '@stores/accountStore'
+import { 
+  Plus, 
+  Delete, 
+  User, 
+  Lock, 
+  View, 
+  Hide
+} from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+
+import '@/assets/theme-variables.css'
 
 interface Tag {
   text: string
@@ -102,6 +157,11 @@ interface Account {
 }
 
 const accountStore = useAccountStore()
+const validationErrors = ref<string[]>([])
+
+const hasPasswordFields = computed(() => {
+  return accountStore.accounts.some(account => account.type === 'Локальная')
+})
 
 onMounted(() => {
   accountStore.loadFromStorage()
@@ -109,13 +169,18 @@ onMounted(() => {
 
 const addAccount = (): void => {
   accountStore.addAccount()
+  ElMessage.success('Добавлена новая запись')
 }
 
 const deleteAccount = (index: number): void => {
   accountStore.deleteAccount(index)
+  ElMessage.success('Запись удалена')
 }
 
 const onTypeChange = (account: Account): void => {
+  if (account.type === 'LDAP') {
+    account.password = null
+  }
   validateAndSave(account)
 }
 
@@ -138,201 +203,313 @@ const validateAccount = (account: Account): boolean => {
 
 const validateAndSave = (account: Account): void => {
   account.validated = true
+  validationErrors.value = []
+  
+  if (!account.login) {
+    validationErrors.value.push('Поле "Логин" обязательно для заполнения')
+  }
+  
+  if (!account.type) {
+    validationErrors.value.push('Поле "Тип записи" обязательно для заполнения')
+  }
+  
+  if (account.type === 'Локальная' && !account.password) {
+    validationErrors.value.push('Поле "Пароль" обязательно для локальных записей')
+  }
   
   if (validateAccount(account)) {
     accountStore.updateAccount(account)
+    if (validationErrors.value.length === 0) {
+      ElMessage.success('Запись сохранена')
+    }
+  } else {
+    ElMessage.error('Заполните все обязательные поля')
   }
 }
 </script>
-
 <style scoped>
 .account-management {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background-color: #f0f0f0;
-  padding: 20px;
+  font-family: var(--font-family);
+  background-color: var(--bg-secondary);
+  padding: var(--spacing-xl);
   min-height: 100vh;
+  color: var(--text-primary);
 }
 
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  background: #e8e8e8;
-  border-radius: 8px;
-  padding: 20px;
+  background: var(--bg-primary);
+  border-radius: var(--border-radius-md);
+  padding: var(--spacing-xl);
+  border: 1px solid var(--border-primary);
 }
 
 .header {
   display: flex;
   align-items: center;
-  gap: 15px;
-  margin-bottom: 20px;
+  gap: var(--spacing-lg);
+  margin-bottom: var(--spacing-xl);
 }
 
 .header h1 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
   margin: 0;
 }
 
-.add-button {
-  background: #ddd;
-  border: 1px solid #bbb;
-  width: 32px;
-  height: 32px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s;
-}
-
-.add-button:hover {
-  background: #ccc;
-}
-
-.hint {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #f8f8f8;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 12px;
-  margin-bottom: 20px;
-  font-size: 14px;
-  color: #666;
-}
-
-.hint-icon {
-  width: 18px;
-  height: 18px;
-  background: #ccc;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  color: white;
-  flex-shrink: 0;
-}
-
 .table-header {
-  display: grid;
-  grid-template-columns: 1fr 150px 1fr 1fr 40px;
-  gap: 15px;
-  padding: 10px 0;
-  border-bottom: 1px solid #ccc;
-  margin-bottom: 10px;
+  padding: var(--spacing-md) 0;
+  border-bottom: 2px solid var(--border-secondary);
+  margin-bottom: var(--spacing-md);
 }
 
 .table-header > div {
-  font-weight: 600;
-  color: #666;
-  font-size: 14px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  font-size: var(--font-size-base);
 }
 
 .table-row {
-  display: grid;
-  grid-template-columns: 1fr 150px 1fr 1fr 40px;
-  gap: 15px;
-  align-items: center;
-  padding: 8px 0;
-  border-bottom: 1px solid #e0e0e0;
+  padding: var(--spacing-sm) 0;
+  border-bottom: 1px solid var(--border-primary);
 }
 
 .table-row:last-child {
   border-bottom: none;
 }
 
-.input-field,
-.select-field {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 14px;
-  background: white;
-  transition: border-color 0.2s;
-}
-
-.input-field:focus,
-.select-field:focus {
-  outline: none;
-  border-color: #007acc;
-}
-
-.input-field.error,
-.select-field.error {
-  border-color: #e74c3c;
-  background-color: #fdf2f2;
-}
-
-.password-container {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.password-input {
-  padding-right: 40px;
-}
-
-.password-toggle {
-  position: absolute;
-  right: 8px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.password-disabled {
-  height: 36px;
-}
-
-.delete-button {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 16px;
-  padding: 8px;
-  border-radius: 4px;
-  transition: background 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.delete-button:hover {
-  background: #f0f0f0;
-}
-
 .empty-state {
   text-align: center;
-  padding: 40px 20px;
-  color: #666;
+  padding: var(--spacing-xxl) var(--spacing-xl);
+  color: var(--text-tertiary);
   grid-column: 1 / -1;
 }
 
 .empty-state p {
-  font-size: 14px;
-  margin-bottom: 8px;
+  font-size: var(--font-size-base);
+  margin-bottom: var(--spacing-sm);
+}
+
+.password-toggle {
+  cursor: pointer;
+  transition: color var(--transition-normal);
+  color: var(--text-tertiary);
+}
+
+.password-toggle:hover {
+  color: var(--text-primary);
+}
+
+.validation-errors {
+  margin-top: var(--spacing-xl);
+}
+
+.error-alert {
+  margin-bottom: var(--spacing-md);
+}
+
+.error-alert:last-child {
+  margin-bottom: 0;
+}
+
+:deep(.el-button.add-button) {
+  background: var(--border-primary);
+  border: 1px solid var(--border-tertiary);
+  color: var(--text-primary);
+  width: var(--button-size-small);
+  height: var(--button-size-small);
+  padding: 0;
+  transition: all var(--transition-fast);
+}
+
+:deep(.el-button.add-button:hover) {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+}
+
+:deep(.el-button.add-button:active) {
+  background: var(--bg-active);
+  border-color: var(--border-secondary);
+}
+
+:deep(.el-button.delete-button) {
+  background: var(--border-primary);
+  border: 1px solid var(--border-tertiary);
+  color: var(--text-tertiary);
+  width: var(--button-size-small);
+  height: var(--button-size-small);
+  padding: 0;
+  transition: all var(--transition-fast);
+}
+
+:deep(.el-button.delete-button:hover) {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+  color: var(--color-error-light);
+}
+
+:deep(.el-button.delete-button:active) {
+  background: var(--bg-active);
+  border-color: var(--border-secondary);
+}
+
+:deep(.el-alert.hint-alert) {
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--spacing-xl);
+}
+
+:deep(.el-alert.hint-alert .el-alert__title) {
+  color: var(--text-secondary);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-normal);
+}
+
+:deep(.el-alert.hint-alert .el-alert__icon) {
+  color: var(--text-disabled);
+}
+
+:deep(.el-input__wrapper) {
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-secondary);
+  box-shadow: none;
+  border-radius: var(--border-radius);
+  transition: all var(--transition-fast);
+}
+
+:deep(.el-input__wrapper:hover) {
+  border-color: var(--border-tertiary);
+}
+
+:deep(.el-input__wrapper.is-focus) {
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-focus);
+}
+
+:deep(.el-input__inner) {
+  color: var(--text-primary);
+  background-color: transparent;
+  font-size: var(--font-size-base);
+}
+
+:deep(.el-input__inner::placeholder) {
+  color: var(--text-muted);
+}
+
+:deep(.error-field .el-input__wrapper) {
+  border-color: var(--color-error);
+  background-color: var(--color-error-bg);
+}
+
+:deep(.el-input__prefix-inner),
+:deep(.el-input__suffix-inner) {
+  color: var(--text-disabled);
+}
+
+:deep(.el-select__wrapper) {
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-secondary);
+  box-shadow: none;
+  border-radius: var(--border-radius);
+  transition: all var(--transition-fast);
+}
+
+:deep(.el-select .el-input__wrapper) {
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-secondary);
+}
+
+:deep(.el-select .el-input__wrapper:hover) {
+  border-color: var(--border-tertiary);
+}
+
+:deep(.el-select .el-input__wrapper.is-focus) {
+  border-color: var(--border-focus);
+}
+
+:deep(.error-field .el-select .el-input__wrapper) {
+  border-color: var(--color-error);
+  background-color: var(--color-error-bg);
+}
+
+:deep(.el-input__suffix-inner .el-select__caret) {
+  color: var(--text-disabled);
+}
+
+:deep(.el-alert.error-alert) {
+  background-color: var(--color-error-bg);
+  border: 1px solid var(--color-error);
+}
+
+:deep(.el-alert.error-alert .el-alert__title) {
+  color: var(--color-error-light);
+}
+
+:deep(.el-alert.error-alert .el-alert__icon) {
+  color: var(--color-error);
+}
+
+:global(.el-select-dropdown) {
+  background-color: var(--bg-input) !important;
+  border: 1px solid var(--border-secondary) !important;
+  box-shadow: var(--shadow-dropdown) !important;
+}
+
+:global(.el-select-dropdown .el-select-dropdown__item) {
+  color: var(--text-primary) !important;
+  background-color: transparent !important;
+}
+
+:global(.el-select-dropdown .el-select-dropdown__item:hover) {
+  background-color: var(--bg-hover) !important;
+}
+
+:global(.el-select-dropdown .el-select-dropdown__item.selected) {
+  background-color: var(--border-focus) !important;
+  color: var(--text-primary) !important;
+}
+
+:global(.dark-popconfirm) {
+  background-color: var(--bg-input) !important;
+  border: 1px solid var(--border-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+:global(.dark-popconfirm .el-popconfirm__main) {
+  color: var(--text-primary) !important;
+}
+
+:global(.dark-popconfirm .el-button--primary) {
+  background-color: var(--border-focus) !important;
+  border-color: var(--border-focus) !important;
+}
+
+:global(.dark-popconfirm .el-button--default) {
+  background-color: var(--bg-hover) !important;
+  border-color: var(--border-tertiary) !important;
+  color: var(--text-primary) !important;
+}
+
+:global(.el-message) {
+  background-color: var(--bg-input) !important;
+  border: 1px solid var(--border-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+:global(.el-message.el-message--success) {
+  background-color: var(--color-success-bg) !important;
+  border-color: var(--color-success) !important;
+}
+
+:global(.el-message.el-message--error) {
+  background-color: var(--color-error-bg) !important;
+  border-color: var(--color-error) !important;
 }
 
 @media (max-width: 768px) {
-  .table-header,
-  .table-row {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-  
   .table-header > div {
     display: none;
   }
@@ -343,11 +520,11 @@ const validateAndSave = (account: Account): void => {
   
   .table-row > div::before {
     content: attr(data-label);
-    font-weight: 600;
-    color: #666;
-    font-size: 12px;
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
     display: block;
-    margin-bottom: 4px;
+    margin-bottom: var(--spacing-xs);
   }
   
   .col-tags::before { content: "Метки:"; }

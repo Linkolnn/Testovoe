@@ -1,0 +1,135 @@
+:root {
+  /* Основные цвета фона */
+  --bg-primary: #181818;
+  --bg-secondary: #0f0f0f;
+  --bg-tertiary: #252525;
+  --bg-input: #2a2a2a;
+  --bg-hover: #404040;
+  --bg-active: #2a2a2a;
+  
+  /* Цвета границ */
+  --border-primary: #333333;
+  --border-secondary: #444444;
+  --border-tertiary: #555555;
+  --border-hover: #666666;
+  --border-focus: #0066cc;
+  
+  /* Цвета текста */
+  --text-primary: #ffffff;
+  --text-secondary: #cccccc;
+  --text-tertiary: #999999;
+  --text-muted: #666666;
+  --text-disabled: #888888;
+  
+  /* Цвета состояний */
+  --color-success: #4caf50;
+  --color-success-bg: #1f2d1f;
+  --color-error: #ff4757;
+  --color-error-light: #ff6b6b;
+  --color-error-bg: #2d1f20;
+  --color-focus: #0066cc;
+  --color-focus-shadow: rgba(0, 102, 204, 0.1);
+  
+  /* Размеры и отступы */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 10px;
+  --spacing-lg: 15px;
+  --spacing-xl: 20px;
+  --spacing-xxl: 40px;
+  
+  /* Размеры элементов */
+  --button-size-small: 32px;
+  --input-height: 32px;
+  --border-radius: 4px;
+  --border-radius-md: 6px;
+  
+  /* Ширины колонок */
+  --col-tags-width: 150px;
+  --col-type-width: 150px;
+  --col-actions-width: 40px;
+  
+  /* Шрифты */
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-size-sm: 12px;
+  --font-size-base: 14px;
+  --font-size-lg: 18px;
+  --font-weight-normal: 400;
+  --font-weight-semibold: 600;
+  
+  /* Переходы */
+  --transition-fast: 0.2s;
+  --transition-normal: 0.3s;
+  
+  /* Тени */
+  --shadow-dropdown: 0 4px 6px rgba(0, 0, 0, 0.3);
+  --shadow-focus: 0 0 0 2px var(--color-focus-shadow);
+}
+
+.dark-theme {
+  color-scheme: dark;
+}
+
+.input-base {
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--border-radius);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  transition: all var(--transition-fast);
+}
+
+.input-base:hover {
+  border-color: var(--border-tertiary);
+}
+
+.input-base:focus {
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-focus);
+  outline: none;
+}
+
+.input-error {
+  border-color: var(--color-error);
+  background-color: var(--color-error-bg);
+}
+
+.button-base {
+  background: var(--border-primary);
+  border: 1px solid var(--border-tertiary);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.button-base:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-hover);
+}
+
+.button-base:active {
+  background: var(--bg-active);
+  border-color: var(--border-secondary);
+}
+
+.grid-table {
+  display: grid;
+  grid-template-columns: var(--col-tags-width) var(--col-type-width) 1fr 1fr var(--col-actions-width);
+  gap: var(--spacing-lg);
+  align-items: center;
+}
+
+.grid-table.no-password {
+  grid-template-columns: var(--col-tags-width) var(--col-type-width) 2fr var(--col-actions-width);
+}
+
+@media (max-width: 768px) {
+  .grid-table,
+  .grid-table.no-password {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+}
