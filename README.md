@@ -7,6 +7,7 @@
 ### - [Vue 3](https://vuejs.org/)
 ### - [TypeScript](https://www.typescriptlang.org/)
 ### - [Pinia](https://pinia.vuejs.org/)
+### - [Element Plus](https://element-plus.org/)
 
 ## Recommended IDE Setup
 
